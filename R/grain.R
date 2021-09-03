@@ -10,11 +10,20 @@
 # x_from_col, y_from_row
 # cell_from_col, cell_from_row, cell_from_rowcol
 # cell_from_xy
-## TODO
+# align_extent, origin
+# cell_from_rowcol_combine
+# row_from_y, col_from_x
 #  cell_from_extent, extent_from_cell
 # xy_from_cell, rowcol_from_cell
+## TODO
+##
+## decide on nrow/ncol or ncol/nrow in this .grain thing
 # crop (positve and negative)
 # cropij (positive and negative but by *number of cells width,height*)
+#
+# refactor these functions to have core versions, something like:
+## fun(query, dimension, extent, projection)
+## perhaps analogs that map directly to C++ versions, just input vectors or single values (xmin, nrow, ...)
 #' @rawNamespace exportPattern("^[^\\.]")
 ##https://github.com/hypertidy/cells/blob/7e2e4d82466db679720036702877f17ec86c5e74/R/grain.R
 .grain <- function(xmin = 0, xmax = 1, ymin = 0, ymax = 1,
@@ -25,6 +34,167 @@
                   nx = nx, ny = ny), extra = list(...), class =
               c("grain", "matrix", "array"))
 }
+
+rowcol_from_cell <- function(object, cell) {
+
+  cell <- round(cell)
+  ncols <- dim(object)[2]
+  cell[cell < 1 | cell > prod(dim(object)[1:2])] <- NA
+  row <- as.integer(trunc((cell-1)/ncols) + 1)
+  col <- as.integer(cell - ((row-1) * ncols))
+  return(cbind(row, col))
+}
+xy_from_cell <- function(object, cell) {
+  xmin <- x_min(object)
+  xmax <- x_max(object)
+  ymin <- y_min(object)
+  ymax <- y_max(object)
+  len <- length(cell)
+  nrows <- nrow(object)
+  ncols <- ncol(object)
+  yres = (ymax - ymin) / nrows
+  xres = (xmax - xmin) / ncols
+
+    c = cell - 1
+    row = floor(c / ncols)
+    col = c - row * ncols
+    cbind((col + 0.5) * xres + xmin,
+          ymax - (row + 0.5) * yres)
+
+}
+col_from_x <- function(object, x) {
+  colnr <- trunc((x - x_min(object)) / x_res(object)) + 1
+  colnr[ x == x_max(object) ] <- ncol(object)
+  colnr[ x < x_min(object) | x > x_max(object) ] <- NA
+  return(as.vector(colnr))
+}
+row_from_y <- function(object, y) {
+  rownr <- 1 + (trunc((y_max(object) - y) / y_res(object)))
+  rownr[y == y_min(object) ] <- nrow(object)
+  rownr[y > y_max(object) | y < y_min(object)] <- NA
+  return(as.vector(rownr))
+}
+intersect_extent <- function(x, y) {
+  y <- .grain(y[1], y[2], y[3], y[4])
+  xmin <- max(x_min(x), x_min(y))
+  xmax <- min(x_max(x), x_max(y))
+  ymin <- max(y_min(x), y_min(y))
+  ymax <- min(y_max(x), y_max(y))
+
+  if ((xmax <= xmin) | (ymax <= ymin) ) {
+    ## objects do not overlap
+    return(NULL)
+  }
+  c(xmin, xmax, ymin, ymax)
+}
+
+cell_from_extent <- function(object, extent) {
+  extent <- align_extent(extent, object)
+  inner_ext <- intersect_extent(object, extent)
+  if (is.null(inner_ext)) {
+    return(NULL)
+  }
+
+  srow <- row_from_y(object, inner_ext[4L] - 0.5 * y_res(object))
+  erow <- row_from_y(object,   inner_ext[3L] + 0.5 * y_res(object))
+  scol <- col_from_x(object,   inner_ext[1L] + 0.5 * x_res(object))
+  ecol <- col_from_x(object,   inner_ext[2L] - 0.5 * x_res(object))
+
+  # if (expand) {
+  #   srow <- srow - round((extent@ymax - innerBox@ymax) / yres(object))
+  #   erow <- erow + round((innerBox@ymin - extent@ymin) / yres(object))
+  #   scol <- scol - round((innerBox@xmin - extent@xmin) / xres(object))
+  #   ecol <- ecol + round((extent@xmax - innerBox@xmax) / xres(object))
+  # }
+  #
+  return(cell_from_rowcol_combine(object, srow:erow, scol:ecol))
+}
+extent_from_cell <- function(object, cells) {
+  cells <- stats::na.omit(unique(round(cells)))
+  cells <- cells[cells > 0 & cells <= prod(dim(object)[1:2])]
+  if (length(cells) < 1) {
+    stop('no valid cells')
+  }
+  r <- c(x_res(object), y_res(object))
+  dx <- r[1] * c(-0.5, 0.5)
+  dy <- r[2] * c(-0.5, 0.5)
+  c(range(x_from_cell(object, cells)) + dx, range(y_from_cell(object, cells)) + dy)
+}
+
+cell_from_rowcol_combine <-
+  function(object, row, col) {
+    nr <- nrow(object)
+    nc <- ncol(object)
+  row[row < 1 | row > nr] <- NA
+  col[col < 1 | col > nc] <- NA
+  cols <- rep(col, times=length(row))
+  dim(cols) <- c(length(col), length(row))
+  cols <- t(cols)
+  row <- (row-1) * nc
+  cols <- cols + row
+  as.vector(t(cols))
+  }
+
+origin <-   function(x) {
+  e <- extent(x)
+  r <- c(x_res(x), y_res(x))
+  x <- e[1L] - r[1]*(round(e[1L] / r[1]))
+  y <- e[4L] - r[2]*(round(e[4L] / r[2]))
+
+  if (isTRUE(all.equal((r[1] + x), abs(x)))) {
+    x <- abs(x)
+  }
+  if (isTRUE(all.equal((r[2] + y), abs(y)))) {
+    y <- abs(y)
+  }
+  return(c(x, y))
+}
+
+align_extent <- function(extent, object, snap = c("out", "near", "in")) {
+  snap <- match.arg(snap)
+  res <- c(x_res(object), y_res(object))
+  orig <- origin(object)
+  xmin <- extent[1L]
+  xmax <- extent[2L]
+  ymin <- extent[3L]
+  ymax <- extent[4L]
+  # snap points to pixel boundaries
+  if (snap == 'near') {
+    xmn <- round((xmin-orig[1]) / res[1]) * res[1] + orig[1]
+    xmx <- round((xmax-orig[1]) / res[1]) * res[1] + orig[1]
+    ymn <- round((ymin-orig[2]) / res[2]) * res[2] + orig[2]
+    ymx <- round((ymax-orig[2]) / res[2]) * res[2] + orig[2]
+  } else if (snap == 'out') {
+    xmn <- floor((xmin-orig[1]) / res[1]) * res[1] + orig[1]
+    xmx <- ceiling((xmax-orig[1]) / res[1]) * res[1] + orig[1]
+    ymn <- floor((ymin-orig[2]) / res[2]) * res[2] + orig[2]
+    ymx <- ceiling((ymax-orig[2]) / res[2]) * res[2] + orig[2]
+  } else if (snap == 'in') {
+    xmn <- ceiling((xmin-orig[1]) / res[1]) * res[1] + orig[1]
+    xmx <- floor((xmax-orig[1]) / res[1]) * res[1] + orig[1]
+    ymn <- ceiling((ymin-orig[2]) / res[2]) * res[2] + orig[2]
+    ymx <- floor((ymax-orig[2]) / res[2]) * res[2] + orig[2]
+  }
+
+  if (xmn == xmx) {
+    if (xmn <= xmin) {
+      xmx <- xmx + res[1]
+    } else {
+      xmn <- xmn - res[1]
+    }
+  }
+  if (ymn == ymx) {
+    if (ymn <= ymin) {
+      ymx <- ymx + res[2]
+    } else {
+      ymn <- ymn - res[2]
+    }
+  }
+  e <- c(xmn, xmx, ymn, ymx)
+  #intersect(e, extent(object))
+  return(e)
+}
+
 
 
 
@@ -242,7 +412,7 @@ n_cell <- function(x) {
 #'
 #' @export
 x_res <- function(x) {
-  (x_max(x) - x_min(x))/n_col(x)
+  (x_max(x) - x_min(x))/ncol(x)
 }
 #' Title
 #'
@@ -253,7 +423,7 @@ x_res <- function(x) {
 #'
 #' @examples
 y_res <- function(x) {
-  (y_max(x) - y_min(x))/n_row(x)
+  (y_max(x) - y_min(x))/nrow(x)
 }
 
 #' Title
