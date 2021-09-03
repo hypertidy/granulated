@@ -4,7 +4,8 @@ Title: Define Rectangular Regions with Granularity
 Description: A granule is a rectangular extent with an implied discretization. The default granularity is 1x1, 
  the range is a whole divisor of itself.  This is the general concept of a raster, a rectangular window with discretization. 
  The common extent or bounding box concept can be thought of as the degenerate case (1x1). 
-Authors@R: person("Michael D.","Sumner", role = c("aut", "cre"), email = "mdsumner@gmail.com")
+Authors@R: c(person("Michael D.","Sumner", role = c("aut", "cre"), email = "mdsumner@gmail.com"), 
+             person("Robert Hijmans", role = "ctb", comment = "wrote much of the raster logic used here"))
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

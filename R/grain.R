@@ -1,19 +1,87 @@
 ## grid logic functions
 
 # xlim, ylim, x_min,x_max,y_min,y_max,
-# ext_ent, n_cell, x_res, y_res,
+# extent, n_cell, x_res, y_res,
 # dim,nrow,ncol,
 # col_from_cell, x_from_cell,
 # row_from_cell, y_from_cell,
 # x_centre, y_centre,
 # x_corner, y_corner,
 # x_from_col, y_from_row
-# ## TODO
 # cell_from_col, cell_from_row, cell_from_rowcol
-# cell_from_xy, cell_from_extent,
+# cell_from_xy
+## TODO
+#  cell_from_extent, extent_from_cell
 # xy_from_cell, rowcol_from_cell
+# crop (positve and negative)
+# cropij (positive and negative but by *number of cells width,height*)
+#' @rawNamespace exportPattern("^[^\\.]")
+##https://github.com/hypertidy/cells/blob/7e2e4d82466db679720036702877f17ec86c5e74/R/grain.R
+.grain <- function(xmin = 0, xmax = 1, ymin = 0, ymax = 1,
+                   nx = 1, ny = 1, ...) {
+  nx <- as.integer(nx)
+  ny <- as.integer(ny)
+  structure(cbind(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax,
+                  nx = nx, ny = ny), extra = list(...), class =
+              c("grain", "matrix", "array"))
+}
 
 
+
+cell_from_xy <- function(x, xy) {
+  xx <- xy[,1L, drop = TRUE]
+  yy <- xy[,2L, drop = TRUE]
+
+
+  len <- length(xx)
+  ncols <- ncol(x)
+  nrows <- nrow(x)
+  xmin <- x_min(x)
+  xmax <- x_max(x)
+  ymin <- y_min(x)
+  ymax <- y_max(x)
+  yres_inv = nrows / (ymax - ymin)
+  xres_inv = ncols / (xmax - xmin)
+    ## cannot use trunc here because trunc(-0.1) == 0
+    row = floor((ymax - yy) * yres_inv);
+    ## points in between rows go to the row below
+    ## except for the last row, when they must go up
+    row <- ifelse(yy == ymin, nrows - 1, row)
+
+    col = floor((xx - xmin) * xres_inv)
+    ## as for rows above. Go right, except for last column
+    col <- ifelse (xx == xmax, ncols-1, col)
+
+    ifelse (row < 0 || row >= nrows || col < 0 || col >= ncols, NA_real_, row * ncols + col + 1)
+}
+cell_from_row_col <- function(x, row, col) {
+   colrow <- cbind(col, row)  ## for recycling
+  colnr <- colrow[,1L]
+   rownr <- colrow[,2L]
+
+   nr <- nrow(x)
+   nc <- ncol(x)
+   i <- seq_along(rownr)-1
+   nn <- length(rownr)
+
+  r <- rownr[ifelse(i < nn, i, i %% nn) + 1]
+  c <- colnr[ifelse(i < nn, i, i %% nn) + 1]
+  ifelse(r < 1 | r > nr | c < 1 | c > nc, NA,  (r-1) * nc + c)
+}
+
+cell_from_row <- function(x, row) {
+  row <- round(row)
+  cols <- rep(1:ncol(x), times=length(row))
+  rows <- rep(row, each=ncol(x))
+  cell_from_row_col(x, rows, cols)
+}
+
+cell_from_col <- function(x, col) {
+  col <- round(col)
+  rows <- rep(1:nrow(x), times = length(col))
+  cols <- rep(col, each = nrow(x))
+  cell_from_row_col(x, rows, cols)
+}
 #' Title
 #'
 #' @param x
@@ -62,18 +130,6 @@ y_from_row <- function(x, y) {
   rev(y_centre(x))[y]
 }
 
-#' @rawNamespace exportPattern("^[^\\.]")
-##https://github.com/hypertidy/cells/blob/7e2e4d82466db679720036702877f17ec86c5e74/R/grain.R
-.grain <- function(xmin, xmax, ymin, ymax,
-                   nx, ny, ...) {
-  nx <- as.integer(nx)
-  ny <- as.integer(ny)
-  resx <- (xmax - xmin)/nx
-  resy <- (ymax - ymin)/ny
-  structure(cbind(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax,
-                  nx = nx, ny = ny, xres = resx, yres = resy), extra = list(...), class =
-              c("grain", "matrix", "array"))
-}
 
 #' Title
 #'
@@ -175,7 +231,7 @@ dim.grain <- function(x) {
 }
 
 #' @export
-ext_ent <- function(x) {
+extent <- function(x) {
   x[, c("xmin", "xmax", "ymin", "ymax")]
 }
 #' @export
@@ -186,7 +242,7 @@ n_cell <- function(x) {
 #'
 #' @export
 x_res <- function(x) {
-  x[, c("xres")]
+  (x_max(x) - x_min(x))/n_col(x)
 }
 #' Title
 #'
@@ -197,7 +253,7 @@ x_res <- function(x) {
 #'
 #' @examples
 y_res <- function(x) {
-  x[, c("yres")]
+  (y_max(x) - y_min(x))/n_row(x)
 }
 
 #' Title
