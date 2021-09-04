@@ -15,10 +15,10 @@
 # row_from_y, col_from_x
 #  cell_from_extent, extent_from_cell
 # xy_from_cell, rowcol_from_cell
+# crop_grain (negative or neutral) set_extent (positive or negative)
 ## TODO
 ##
 ## decide on nrow/ncol or ncol/nrow in this .grain thing
-# crop (positve and negative)
 # cropij (positive and negative but by *number of cells width,height*)
 #
 # refactor these functions to have core versions, something like:
@@ -34,6 +34,40 @@
                   nx = nx, ny = ny), extra = list(...), class =
               c("grain", "matrix", "array"))
 }
+
+crop_grain <- function(x, extent, snap = "out") {
+  #raster::crop does
+  e <- intersect_extent(x, extent)
+  if (is.null(e)) {
+    stop("extents do not overlap")
+  }
+  e <- align_extent(e, x, snap = snap)
+ e
+}
+# we are implicitly keepres=TRUE (so maybe this is crop_grid ...)
+## FIXME: error here somewhere ylim not working
+set_extent <- function(x, e) {
+  #out <- setExtent(x, e, keepres = TRUE)
+  newobj <- x #clearValues(x)
+  xrs <- x_res(newobj)
+  yrs <- y_res(newobj)
+  extent <- align_extent(e, x)
+  #newobj@extent <- bb
+  nc <- as.integer(round( (extent[2L] - extent[1L]) / xrs ))
+  if (nc < 1) {
+    stop( "xmin and xmax are less than one cell apart" )
+  }
+  nr <- as.integer(round( (extent[4L] - extent[3L]) / yrs ) )
+  if (nr < 1) {
+    stop( "ymin and ymax are less than one cell apart" )
+  }
+
+  extent[2L] <- extent[1L] + nc * xrs
+  extent[4L] <- extent[3L] + nr * yrs
+  .grain(extent[1], extent[2], extent[3], extent[4], nc, nr)
+}
+
+
 
 rowcol_from_cell <- function(object, cell) {
 
