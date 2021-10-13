@@ -12,7 +12,7 @@ extent.default <- function(x) {
 }
 #' @export
 extent.grain <- function(x) {
-  unname(x[1L, c("xmin", "xmax", "ymin", "ymax")])
+  x[1L, c("xmin", "xmax", "ymin", "ymax"), drop = TRUE]
 }
 #' @export
 extent.array <- function(x) {
@@ -27,7 +27,7 @@ extent.grd <- function(x) {
   ## - .grain() here is a bit silly but there's nothing in R that
   ## can do this just apart from xyz <- list(x = vec, y = vec, z = img) with
   ## image() and raster::raster(xyz)
-  unlist(x$bbox[c("xmin", "xmax", "ymin", "ymax")], use.names = FALSE)
+  unlist(x$bbox, use.names = TRUE)[c("xmin", "xmax", "ymin", "ymax")]
 }
 #' @export
 xlim <- function(x) {

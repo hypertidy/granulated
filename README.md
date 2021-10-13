@@ -19,11 +19,11 @@ functionality working, since R has no idea about a raster *grid with
 extent* apart from implicit functionality in `graphics::image()` and
 `graphics::rasterImage()`.
 
-The very new and experimental grd package provides a more sensible basis
-for proving this on, and work is currently aimed at that. The raster
-package has an uncertain future, and no other project we’re aware of
-aims to capture this functionality that sits somewhere between generic
-array data and bitmaps in R.
+The very new and experimental [grd](https://github.com/paleolimbot/grd)
+package provides a more sensible basis for proving this on, and work is
+currently aimed at that. The raster package has an uncertain future, and
+no other project we’re aware of aims to capture this functionality that
+sits somewhere between generic array data and bitmaps in R.
 
 ## Motivations
 
@@ -35,12 +35,14 @@ array data and bitmaps in R.
 -   I have become accustomed to treating raster data in the abstract,
     there is properties *dimension*, *extent*, *projection* and most
     work revolves around that - in raster package, data is stored (when
-    it’s materialized) in flat column form - grd and granulated aim to
-    capture that abstracted space and the missing pieces in R and we’ll
-    work out the spaces in between
+    it’s materialized) in flat column form, almost never does the actual
+    dimensionality impact the storage of the data
 -   the raster package provides excellent support for almost everything
     here (!) but, it is subject to the turbulence and uncertain future
     of sp et al. 
+
+… grd and granulated aim to capture that abstracted space and the
+missing pieces in R and we’ll work out the spaces in between.
 
 Despite some heroic efforts (raster, stars, ggspatial, lazyraster, grd,
 rayvista, …) there’s no easy *canvas* support in R, ‘here’s my domain
