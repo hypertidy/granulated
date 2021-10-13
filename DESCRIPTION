@@ -1,5 +1,5 @@
 Package: granulated
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Title: Define Rectangular Regions with Granularity
 Description: A granule is a rectangular extent with an implied discretization. The default granularity is 1x1, 
  the range is a whole divisor of itself.  This is the general concept of a raster, a rectangular window with discretization. 
@@ -10,8 +10,6 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Language: es
-Imports: 
-    vctrs,
-    zeallot
+
