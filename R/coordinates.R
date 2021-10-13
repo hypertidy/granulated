@@ -1,27 +1,3 @@
-#' Title
-#'
-#' @param x
-#' @param y
-#'
-#' @return
-#' @export
-#'
-#' @examples
-x_from_col <- function(x, y) {
-  x_centre(x)[y]
-}
-#' Title
-#'
-#' @param x
-#' @param y
-#'
-#' @return
-#' @export
-#'
-#' @examples
-y_from_row <- function(x, y) {
-  rev(y_centre(x))[y]
-}
 
 #' Title
 #'
@@ -88,6 +64,31 @@ coords <- function(x) {
   cell <- seq_len(n_cell(x))
   cbind(x = x_from_cell(x, cell),
         y = y_from_cell(x, cell))
+}
+
+#' Title
+#'
+#' @param x
+#' @param y
+#'
+#' @return
+#' @export
+#'
+#' @examples
+x_from_col <- function(x, y) {
+  x_centre(x)[y]
+}
+#' Title
+#'
+#' @param x
+#' @param y
+#'
+#' @return
+#' @export
+#'
+#' @examples
+y_from_row <- function(x, y) {
+  rev(y_centre(x))[y]
 }
 
 #' @export

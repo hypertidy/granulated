@@ -179,8 +179,7 @@ extent_from_cell <- function(object, cells) {
   c(range(x_from_cell(object, cells)) + dx, range(y_from_cell(object, cells)) + dy)
 }
 #' @export
-cell_from_rowcol_combine <-
-  function(object, row, col) {
+cell_from_rowcol_combine <-function(object, row, col) {
     nr <- nrow(object)
     nc <- ncol(object)
     row[row < 1 | row > nr] <- NA
